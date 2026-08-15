@@ -1,0 +1,15 @@
+[Unit]
+Description=Tech Memory MCP Server (机的独立工作室)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/tech-memory
+EnvironmentFile=/opt/tech-memory/tech_memory.env
+ExecStart=/usr/bin/python3 /opt/tech-memory/tech_memory_server.py
+Restart=always
+RestartSec=3
+MemoryMax=100M
+
+[Install]
+WantedBy=multi-user.target
