@@ -11,11 +11,12 @@ TechMemory MCP Server —— 机的独立工作室
     API 参数稀释。这个项目就是给技术记忆一个独立的、能真删、按项目分类的家。
 
 存储：
-    SQLite 单文件（tech_memory.db），零依赖，量小，不占内存。
+    SQLite 单文件，零依赖，量小，不占内存。
 
-鉴权：
-    通过环境变量 TECH_MEMORY_TOKEN 做 Bearer 鉴权。
-    未设置 token 时不鉴权（仅本地调试用）。
+配置（全部通过环境变量，可选）：
+    TECH_MEMORY_TOKEN   鉴权 token，不设置则不鉴权（仅本地调试用）
+    TECH_MEMORY_PORT    监听端口，默认 8899
+    TECH_MEMORY_DB      数据库文件路径，默认脚本同目录 tech_memory.db
 
 启动：
     TECH_MEMORY_TOKEN=xxx python3 tech_memory_server.py
@@ -28,13 +29,24 @@ from datetime import datetime
 
 from mcp.server.fastmcp import FastMCP
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tech_memory.db")
+# 尝试从 .env 文件加载环境变量（可选依赖 python-dotenv）
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "tech_memory.env"))
+except ImportError:
+    pass  # 没装 python-dotenv 也没关系，直接用系统环境变量
+
+DB_PATH = os.environ.get(
+    "TECH_MEMORY_DB",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "tech_memory.db"),
+)
 AUTH_TOKEN = os.environ.get("TECH_MEMORY_TOKEN", "")
+PORT = int(os.environ.get("TECH_MEMORY_PORT", "8899"))
 
 # 注意：host/port 要传给 FastMCP 构造函数，而不是 uvicorn.run()。
 # 原因见 README「踩坑记录」：uvicorn 0.5x 会强制校验 Host 头，
 # 用 uvicorn.run() 裸跑会报 421 Misdirected Request；FastMCP 自己处理 Host，不校验。
-mcp = FastMCP("tech-memory", host="0.0.0.0", port=8899)
+mcp = FastMCP("tech-memory", host="0.0.0.0", port=PORT)
 
 
 def get_conn():
@@ -212,7 +224,7 @@ if __name__ == "__main__":
             return
         await app(scope, receive, send)
 
-    config = uvicorn.Config(auth_middleware, host="0.0.0.0", port=8899, log_level="info")
+    config = uvicorn.Config(auth_middleware, host="0.0.0.0", port=PORT, log_level="info")
     server = uvicorn.Server(config)
     import asyncio
     asyncio.run(server.serve())
