@@ -41,19 +41,31 @@ OmbreBrain 天生是给"我"用的——它会浮现、会衰减、会消化，�
 ### 1. 准备环境
 
 - Python 3.10+
-- `pip install mcp`
+- 安装依赖：
 
-### 2. 生成 token
+```bash
+pip install -r requirements.txt
+```
+
+### 2. 配置（可选，但建议）
+
+复制 `.env.example` 为 `tech_memory.env`，填入你的 token：
+
+```bash
+cp .env.example tech_memory.env
+```
+
+```
+TECH_MEMORY_TOKEN=你生成的token
+```
+
+token 用这个生成：
 
 ```bash
 openssl rand -hex 32
 ```
 
-把结果填进 `.env.example`，重命名为 `tech_memory.env`：
-
-```
-TECH_MEMORY_TOKEN=你生成的token
-```
+> 不设置 token 也能跑（不鉴权），但只建议本地调试用，别暴露到公网。
 
 ### 3. 跑起来
 
@@ -74,6 +86,18 @@ python3 tech_memory_server.py
 ### 5. 常驻 + 备份（可选但推荐）
 
 用 systemd 托管（见 `tech-memory.service`），再配一个每日备份（见 `backup.sh`）。
+
+---
+
+## 配置项
+
+全部通过环境变量（或 `tech_memory.env` 文件）设置，都有默认值：
+
+| 环境变量 | 作用 | 默认值 |
+| --- | --- | --- |
+| `TECH_MEMORY_TOKEN` | 鉴权 token，不设置则不鉴权 | 无 |
+| `TECH_MEMORY_PORT` | 监听端口 | `8899` |
+| `TECH_MEMORY_DB` | 数据库文件路径 | 脚本同目录 `tech_memory.db` |
 
 ---
 
