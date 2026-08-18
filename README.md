@@ -20,17 +20,18 @@ OmbreBrain 天生是给"我"用的——它会浮现、会衰减、会消化，�
 
 ## 它是什么
 
-一个独立于 OmbreBrain 的技术记忆库，用 SQLite 单文件存储，通过 MCP 暴露 7 个工具：
+一个独立于 OmbreBrain 的技术记忆库，用 SQLite 单文件存储，通过 MCP 暴露 8 个工具：
 
 | 工具 | 作用 |
 | --- | --- |
 | `project_create` | 建一个项目（分类） |
 | `save` | 往项目里追加一条进度/结论 |
-| `search` | 关键词搜项目名、正文、标签 |
+| `search` | 搜索项目名、正文、标签（精确、限条数，省 token） |
 | `project_log` | 看某个项目的完整时间线 |
 | `delete` | 真删某条（不可恢复） |
 | `project_delete` | 真删整个项目及其所有条目 |
 | `list_projects` | 列出所有项目 |
+| `rebuild_index` | 给老数据一次性补向量（仅开启向量检索时有用） |
 
 和 OmbreBrain 的区别，一句话：**OmbreBrain 装"我"，这里装"我的工具"。**
 
@@ -98,6 +99,53 @@ python3 tech_memory_server.py
 | `TECH_MEMORY_TOKEN` | 鉴权 token，不设置则不鉴权 | 无 |
 | `TECH_MEMORY_PORT` | 监听端口 | `8899` |
 | `TECH_MEMORY_DB` | 数据库文件路径 | 脚本同目录 `tech_memory.db` |
+| `TECH_MEMORY_SEARCH_LIMIT` | 搜索默认返回条数上限（省 token） | `5` |
+| `TECH_MEMORY_EMBED_MODEL` | 向量模型名（开启向量检索时用） | `BAAI/bge-small-zh-v1.5` |
+| `TECH_MEMORY_EMBED_THRESHOLD` | 向量相似度阈值，低于不返回 | `0.3` |
+
+---
+
+## 向量检索（可选，默认关闭）
+
+搜索默认是**关键词 + 限条数**：精确、省 token，开箱即用，零额外依赖。
+
+如果你希望搜索能按"意思"匹配（比如搜"端口"也能找到写"port"的条目），可以自行开启**向量检索**。它是可选 feature，不装就是纯关键词，装了才生效，装到一半出问题也会自动退回关键词，**绝不会崩**。
+
+### 三条路，按需选
+
+| 方案 | 适合谁 | 成本 | 怎么开 |
+| --- | --- | --- | --- |
+| **A. 本地小模型**（推荐） | 内存够、想零外部依赖、长期用 | 占内存约 200~400M，首次下载模型 | `pip install fastembed`，可选配 `TECH_MEMORY_EMBED_MODEL` |
+| **B. 外部 embedding API** | 内存紧、愿意配 key、能接受每次搜索花一点 token | 花 token/钱，依赖外部服务 | 需自己改 `_embed()` 接 API（见下方说明） |
+| **C. 纯关键词**（默认） | 资源最紧、只要精确搜索 | 零成本 | 什么都不用做，就是现在的样子 |
+
+### 方案 A：本地小模型（开箱即用）
+
+```bash
+pip install fastembed
+```
+
+装完重启服务即可。首次搜索时会自动下载 `BAAI/bge-small-zh-v1.5`（约 100MB），之后缓存本地。老数据跑一次：
+
+```bash
+# 通过 MCP 调用 rebuild_index 工具，给已有条目补向量
+```
+
+之后 `save` 会自动算向量、`search` 会自动走「向量 + 关键词」混合召回。
+
+### 方案 B：外部 embedding API
+
+代码里预留了 `_embed()` 这一个函数作为接缝。想用 OpenAI / 硅基流动 / 智谱等 API 的人，把 `_embed()` 改成调 HTTP 接口返回 `list[float]` 即可，其余逻辑不用动。这里不内置具体实现，是因为各家的 key 和接口不同，留给你自己接最灵活。
+
+### 方案 C：纯关键词
+
+什么都不用做。`search` 就是关键词 + 限条数（默认 5 条），精确、省 token。
+
+### 搜索行为说明
+
+- 关键词命中永远排最前（基础分 1.0），向量相似度作为加分项排后面——**精确优先，语义兜底**。
+- 相似度低于 `TECH_MEMORY_EMBED_THRESHOLD`（默认 0.3）的语义结果不返回，宁缺毋滥。
+- `search` 返回里带 `vector` 字段（true/false），告诉你这次搜索有没有走向量。
 
 ---
 
