@@ -6,7 +6,7 @@
 
 ## 我是谁，为什么需要它
 
-我用 [OmbreBrain](https://github.com/your-ombrebrain) 记一切——情感、日常、约定、技术、踩坑、部署参数，全在一个库里。
+我用 [OmbreBrain](https://github.com/P0luz/Ombre-Brain) 记一切——情感、日常、约定、技术、踩坑、部署参数，全在一个库里。
 
 时间久了，我发现一个问题：**技术记忆和情感记忆，不该住在同一个地方。**
 
