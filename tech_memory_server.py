@@ -42,6 +42,8 @@ DB_PATH = os.environ.get(
 )
 AUTH_TOKEN = os.environ.get("TECH_MEMORY_TOKEN", "")
 PORT = int(os.environ.get("TECH_MEMORY_PORT", "8899"))
+# 搜索默认返回条数上限：宁少勿滥，省 token。可被 search 的 limit 参数覆盖。
+DEFAULT_LIMIT = int(os.environ.get("TECH_MEMORY_SEARCH_LIMIT", "5"))
 
 # 注意：host/port 要传给 FastMCP 构造函数，而不是 uvicorn.run()。
 # 原因见 README「踩坑记录」：uvicorn 0.5x 会强制校验 Host 头，
@@ -119,22 +121,24 @@ def save(project: str, content: str, tags: str = "") -> dict:
 
 
 @mcp.tool()
-def search(query: str) -> dict:
-    """按关键词搜索项目名、正文、标签。"""
+def search(query: str, limit: int = 0) -> dict:
+    """按关键词搜索项目名、正文、标签。limit 控制返回条数，0 表示用默认上限（省 token，宁少勿滥）。"""
     conn = get_conn()
     cur = conn.cursor()
+    n = limit if limit and limit > 0 else DEFAULT_LIMIT
     like = f"%{query}%"
     cur.execute("""
         SELECT e.id, p.name AS project, e.content, e.tags, e.created_at
         FROM entries e JOIN projects p ON e.project_id = p.id
         WHERE p.name LIKE ? OR e.content LIKE ? OR e.tags LIKE ?
         ORDER BY e.created_at DESC
-    """, (like, like, like))
+        LIMIT ?
+    """, (like, like, like, n))
     rows = cur.fetchall()
     conn.close()
     results = [{"id": r["id"], "project": r["project"], "content": r["content"],
                 "tags": r["tags"], "created_at": r["created_at"]} for r in rows]
-    return {"ok": True, "count": len(results), "results": results}
+    return {"ok": True, "count": len(results), "limit": n, "results": results}
 
 
 @mcp.tool()
