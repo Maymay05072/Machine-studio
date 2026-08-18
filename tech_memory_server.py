@@ -179,6 +179,48 @@ def save(project: str, content: str, tags: str = "") -> dict:
 
 
 @mcp.tool()
+def update(entry_id: int, content: str = "", tags: str = "", project: str = "") -> dict:
+    """原地改某条技术记忆的正文/标签/所属项目，不删不重建。content、tags、project 至少传一项。"""
+    if not content and not tags and not project:
+        return {"ok": False, "msg": "content、tags、project 至少传一项，否则没东西可改"}
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # 先确认条目存在，并拿到当前正文/标签（改正文后要重算向量）
+    cur.execute("SELECT content, tags FROM entries WHERE id = ?", (entry_id,))
+    row = cur.fetchone()
+    if row is None:
+        conn.close()
+        return {"ok": False, "msg": f"条目 {entry_id} 不存在"}
+
+    new_content = content if content else row["content"]
+    new_tags = tags if tags else row["tags"]
+
+    # 改所属项目（可选）
+    if project:
+        cur.execute("SELECT id FROM projects WHERE name = ?", (project,))
+        p = cur.fetchone()
+        if p is None:
+            conn.close()
+            return {"ok": False, "msg": f"项目「{project}」不存在，请先 project_create"}
+        pid = p["id"]
+    else:
+        cur.execute("SELECT project_id FROM entries WHERE id = ?", (entry_id,))
+        pid = cur.fetchone()["project_id"]
+
+    # 重算向量（正文或标签变了才需要；没开向量则 _embed 返回 None，存空串）
+    emb = _embed(new_content + " " + new_tags)
+    emb_json = json.dumps(emb) if emb is not None else ""
+
+    cur.execute("UPDATE entries SET content = ?, tags = ?, project_id = ?, embedding = ? WHERE id = ?",
+                (new_content, new_tags, pid, emb_json, entry_id))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "msg": f"条目 {entry_id} 已更新"}
+
+
+@mcp.tool()
 def search(query: str, limit: int = 0) -> dict:
     """搜索。装了 fastembed 走「向量+关键词」混合召回，没装退回纯关键词。limit 控制返回条数，0 用默认上限。"""
     conn = get_conn()
