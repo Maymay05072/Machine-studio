@@ -361,25 +361,26 @@ def list_projects() -> dict:
 
 if __name__ == "__main__":
     import uvicorn
-    from starlette.responses import JSONResponse
+    from web_app import build_app, mcp_bearer_guard
 
     init_db()
-    app = mcp.streamable_http_app()
-
-    # Bearer 鉴权中间件
-    async def auth_middleware(scope, receive, send):
-        if scope["type"] != "http":
-            await app(scope, receive, send)
-            return
-        headers = dict(scope.get("headers", []))
-        auth = headers.get(b"authorization", b"").decode()
-        if AUTH_TOKEN and auth != f"Bearer {AUTH_TOKEN}":
-            response = JSONResponse({"error": "unauthorized"}, status_code=403)
-            await response(scope, receive, send)
-            return
-        await app(scope, receive, send)
-
-    config = uvicorn.Config(auth_middleware, host="0.0.0.0", port=PORT, log_level="info")
+    mcp_http_app = mcp.streamable_http_app()
+    web_and_mcp_app = build_app(
+        mcp_app=mcp_http_app,
+        mcp_lifespan=lambda _app: mcp.session_manager.run(),
+        auth_token=AUTH_TOKEN,
+        get_conn=get_conn,
+        project_create=project_create,
+        save=save,
+        update=update,
+        search=search,
+        project_log=project_log,
+        delete=delete,
+        project_delete=project_delete,
+        list_projects=list_projects,
+    )
+    app = mcp_bearer_guard(web_and_mcp_app, AUTH_TOKEN)
+    config = uvicorn.Config(app, host="0.0.0.0", port=PORT, log_level="info")
     server = uvicorn.Server(config)
     import asyncio
     asyncio.run(server.serve())
