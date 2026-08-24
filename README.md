@@ -75,7 +75,12 @@ openssl rand -hex 32
 python3 tech_memory_server.py
 ```
 
-默认监听 `0.0.0.0:8899`。启动后同时提供：\n\n- 网页工作室：`http://你的服务器地址:8899/`\n- MCP 端点：`http://你的服务器地址:8899/mcp`\n\n网页首次打开会要求输入 `TECH_MEMORY_TOKEN` 作为访问密码。验证成功后才能读取、搜索、新增、修改或删除数据库内容。网页登录使用临时 HttpOnly 会话，不把 token 写入网页源码或 localStorage。
+默认监听 `0.0.0.0:8899`。启动后同时提供：
+
+- 网页工作室：`http://你的服务器地址:8899/`
+- MCP 端点：`http://你的服务器地址:8899/mcp`
+
+网页首次打开会要求输入 `TECH_MEMORY_TOKEN` 作为访问密码。验证成功后才能读取、搜索、新增、修改或删除数据库内容。网页登录使用临时 HttpOnly 会话，不把 token 写入网页源码或 localStorage。
 
 ### 4. 接进你的 AI 客户端
 
@@ -100,7 +105,9 @@ python3 tech_memory_server.py
 | `TECH_MEMORY_TOKEN` | 鉴权 token，不设置则不鉴权 | 无 |
 | `TECH_MEMORY_PORT` | 监听端口 | `8899` |
 | `TECH_MEMORY_DB` | 数据库文件路径 | 脚本同目录 `tech_memory.db` |
-| `TECH_MEMORY_SEARCH_LIMIT` | 搜索默认返回条数上限（省 token） | `5` |\n| `TECH_MEMORY_COOKIE_SECURE` | HTTPS 部署时设为 `1`，为网页登录 Cookie 添加 Secure 标记 | `0` |\n| `TECH_MEMORY_SESSION_HOURS` | 网页登录会话有效时长（小时） | `12` |
+| `TECH_MEMORY_SEARCH_LIMIT` | 搜索默认返回条数上限（省 token） | `5` |
+| `TECH_MEMORY_COOKIE_SECURE` | HTTPS 部署时设为 `1`，为网页登录 Cookie 添加 Secure 标记 | `0` |
+| `TECH_MEMORY_SESSION_HOURS` | 网页登录会话有效时长（小时） | `12` |
 | `TECH_MEMORY_EMBED_MODEL` | 向量模型名（开启向量检索时用） | `BAAI/bge-small-zh-v1.5` |
 | `TECH_MEMORY_EMBED_THRESHOLD` | 向量相似度阈值，低于不返回 | `0.3` |
 
@@ -158,7 +165,9 @@ pip install fastembed
 2. **更安全**：如果你本来就用内网组网（比如 Tailscale、ZeroTier），就只放行内网网段，让公网连不上。
 3. **最安全**：Nginx 反代 + HTTPS + 鉴权，适合想认真搞的人。
 
-不管你选哪一档，**Bearer 鉴权都别省**——它是最后一道闸。公网使用网页端时强烈建议配置 Nginx + HTTPS，并将 `TECH_MEMORY_COOKIE_SECURE=1`；HTTPS 会加密访问密码和记忆内容的传输。\n\n网页本身的 HTML/CSS/JavaScript 可以公开加载，但所有 `/api/*` 数据接口和 `/mcp` 都有独立鉴权。每位部署者使用自己的 token 和 SQLite 文件，仓库中不包含任何人的真实数据或密码。
+不管你选哪一档，**Bearer 鉴权都别省**——它是最后一道闸。公网使用网页端时强烈建议配置 Nginx + HTTPS，并将 `TECH_MEMORY_COOKIE_SECURE=1`；HTTPS 会加密访问密码和记忆内容的传输。
+
+网页本身的 HTML/CSS/JavaScript 可以公开加载，但所有 `/api/*` 数据接口和 `/mcp` 都有独立鉴权。每位部署者使用自己的 token 和 SQLite 文件，仓库中不包含任何人的真实数据或密码。
 
 ---
 
